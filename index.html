@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Roadmap Designer Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f0ede8;--panel:#ffffff;--border:#e2dfd8;--text:#1a1a1a;--muted:#888;
+  --accent:#4a6fa5;--accent2:#e8f0fc;--radius:10px;
+  --font:'Inter',sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* ── TOOLBAR ── */
+#toolbar{
+  display:flex;align-items:center;gap:0;background:var(--panel);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+  height:48px;overflow:hidden;
+}
+#toolbar-inner{
+  display:flex;align-items:center;gap:6px;padding:0 14px;
+  overflow-x:auto;white-space:nowrap;height:100%;
+  scrollbar-width:none;
+}
+#toolbar-inner::-webkit-scrollbar{display:none;}
+.tb-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;margin-right:6px;flex-shrink:0;}
+.sep{width:1px;height:28px;background:var(--border);margin:0 6px;flex-shrink:0;}
+.tb-group{display:inline-flex;align-items:center;gap:5px;flex-shrink:0;}
+.tb-lbl{font-size:10px;color:var(--muted);white-space:nowrap;}
+.tb-btn{font-size:11px;font-family:var(--font);padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;transition:all .15s;white-space:nowrap;font-weight:500;}
+.tb-btn:hover{background:#f4f1ec;border-color:#bbb;}
+.tb-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.tb-btn.danger{color:#c0392b;}
+.tb-btn.danger:hover{background:#fdecea;border-color:#e57373;}
+input[type=color]{width:26px;height:26px;border:1px solid var(--border);border-radius:5px;cursor:pointer;padding:2px;flex-shrink:0;}
+.range-wrap{display:inline-flex;align-items:center;gap:5px;}
+.range-wrap input[type=range]{width:70px;cursor:pointer;accent-color:var(--accent);}
+.range-val{font-size:10px;color:var(--muted);min-width:22px;text-align:right;}
+select{font-size:11px;font-family:var(--font);padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:var(--panel);cursor:pointer;font-weight:500;}
+
+/* ── CANVAS ── */
+#canvas-wrap{flex:1;position:relative;overflow:hidden;}
+#canvas-wrap svg{position:absolute;top:0;left:0;width:100%;height:100%;cursor:default;}
+
+/* ── DRAGGABLE CARD (HTML overlay) ── */
+.station-card{
+  position:absolute;background:#fff;border:1.5px solid #ccc;border-radius:10px;
+  padding:10px 14px;min-width:160px;max-width:260px;cursor:grab;user-select:none;
+  box-shadow:0 2px 10px rgba(0,0,0,.08);transition:box-shadow .15s;
+}
+.station-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.14);}
+.station-card.dragging{cursor:grabbing;box-shadow:0 10px 32px rgba(0,0,0,.22);z-index:999;}
+.card-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;
+  color:#fff;margin-bottom:6px;flex-shrink:0;
+}
+.card-title{font-size:13px;font-weight:600;line-height:1.3;word-break:break-word;}
+.card-sub{font-size:11px;margin-top:3px;line-height:1.4;word-break:break-word;opacity:.75;}
+.card-edit-btn{
+  position:absolute;top:7px;right:8px;font-size:11px;background:none;border:none;
+  cursor:pointer;opacity:0;transition:opacity .15s;color:#555;padding:2px;
+}
+.station-card:hover .card-edit-btn{opacity:1;}
+
+/* ── EDIT PANEL (sidebar) ── */
+#edit-panel{
+  position:absolute;right:0;top:0;bottom:0;width:290px;background:var(--panel);
+  border-left:1px solid var(--border);overflow-y:auto;transform:translateX(100%);
+  transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:300;padding:20px 18px;
+}
+#edit-panel.open{transform:translateX(0);}
+#edit-panel h2{font-size:14px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+#edit-panel h2 button{background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);}
+.ep-section{margin-bottom:18px;}
+.ep-section h3{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;font-weight:600;}
+.ep-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.ep-row label{font-size:12px;flex:1;min-width:60px;}
+.ep-row input[type=text],.ep-row textarea{flex:2;border:1px solid var(--border);border-radius:7px;padding:6px 9px;font-size:12px;font-family:var(--font);outline:none;resize:vertical;width:100%;}
+.ep-row input[type=text]:focus,.ep-row textarea:focus{border-color:var(--accent);}
+.ep-full{margin-bottom:8px;}
+.ep-full label{font-size:12px;display:block;margin-bottom:4px;color:var(--muted);}
+.ep-full input[type=text],.ep-full textarea{width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;font-family:var(--font);outline:none;resize:vertical;}
+.ep-full input[type=text]:focus,.ep-full textarea:focus{border-color:var(--accent);}
+.color-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.color-item{display:flex;align-items:center;gap:6px;font-size:12px;}
+.color-item input[type=color]{width:28px;height:28px;}
+.ep-btn{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-family:var(--font);font-weight:500;margin-bottom:6px;}
+.ep-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.ep-btn.primary:hover{opacity:.88;}
+.ep-btn.del{color:#c0392b;border-color:#e57373;}
+.ep-btn.del:hover{background:#fdecea;}
+.ep-btn:hover{background:var(--bg);}
+.range-ep{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.range-ep label{font-size:12px;min-width:80px;}
+.range-ep input[type=range]{flex:1;accent-color:var(--accent);}
+.range-ep span{font-size:11px;color:var(--muted);min-width:24px;text-align:right;}
+/* ── ADD STATION BTN ── */
+#add-btn{
+  position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--accent);color:#fff;border:none;border-radius:24px;
+  padding:10px 22px;font-size:13px;font-weight:600;font-family:var(--font);
+  cursor:pointer;box-shadow:0 4px 18px rgba(74,111,165,.35);transition:all .2s;
+  white-space:nowrap;z-index:200;
+}
+#add-btn:hover{transform:translateX(-50%) translateY(-2px);box-shadow:0 6px 24px rgba(74,111,165,.45);}
+
+/* ── CONNECTOR SVG ── */
+#connector-svg{pointer-events:none;}
+</style>
+</head>
+<body>
+
+<!-- ══ TOOLBAR ══ -->
+<div id="toolbar">
+<div id="toolbar-inner">
+  <span class="tb-title">Roadmap Designer</span>
+  <div class="sep"></div>
+
+  <!-- Road -->
+  <div class="tb-group">
+    <span class="tb-lbl">Road</span>
+    <input type="color" id="c-road" value="#1e1e1e" title="Road color" oninput="setRoadColor(this.value)"/>
+    <input type="color" id="c-dash" value="#f0a500" title="Dash color" oninput="setDashColor(this.value)"/>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Road shape controls -->
+  <div class="tb-group">
+    <span class="tb-lbl">Width</span>
+    <div class="range-wrap"><input type="range" min="18" max="72" value="38" oninput="setRoadWidth(+this.value);rw_v.textContent=this.value"/><span class="range-val" id="rw_v">38</span></div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-lbl">Curviness</span>
+    <div class="range-wrap"><input type="range" min="0" max="100" value="55" oninput="setCurviness(+this.value);cv_v.textContent=this.value"/><span class="range-val" id="cv_v">55</span></div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-lbl">Amplitude</span>
+    <div class="range-wrap"><input type="range" min="10" max="160" value="80" oninput="setAmplitude(+this.value);am_v.textContent=this.value"/><span class="range-val" id="am_v">80</span></div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-lbl">Frequency</span>
+    <div class="range-wrap"><input type="range" min="1" max="6" step="0.5" value="3" oninput="setFrequency(+this.value);fq_v.textContent=this.value"/><span class="range-val" id="fq_v">3</span></div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-lbl">Dash len</span>
+    <div class="range-wrap"><input type="range" min="4" max="40" value="16" oninput="setDashLen(+this.value);dl_v.textContent=this.value"/><span class="range-val" id="dl_v">16</span></div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-lbl">Dash gap</span>
+    <div class="range-wrap"><input type="range" min="2" max="40" value="12" oninput="setDashGap(+this.value);dg_v.textContent=this.value"/><span class="range-val" id="dg_v">12</span></div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-lbl">Dot size</span>
+    <div class="range-wrap"><input type="range" min="6" max="22" value="13" oninput="setDotSize(+this.value);ds_v.textContent=this.value"/><span class="range-val" id="ds_v">13</span></div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- Card style -->
+  <div class="tb-group">
+    <span class="tb-lbl">Card radius</span>
+    <div class="range-wrap"><input type="range" min="0" max="28" value="10" oninput="setCardRadius(+this.value);cr_v.textContent=this.value"/><span class="range-val" id="cr_v">10</span></div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-lbl">Shadow</span>
+    <button class="tb-btn" id="btn-shadow" onclick="toggleShadow(this)">Off</button>
+  </div>
+  <div class="tb-group">
+    <span class="tb-lbl">Font</span>
+    <select id="ctrl-font" onchange="setGlobalFont(this.value)">
+      <option value="'Inter',sans-serif">Inter</option>
+      <option value="Georgia,serif">Georgia</option>
+      <option value="'Playfair Display',serif">Playfair</option>
+      <option value="'Trebuchet MS',sans-serif">Trebuchet</option>
+      <option value="'Courier New',monospace">Courier</option>
+    </select>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- BG -->
+  <div class="tb-group">
+    <span class="tb-lbl">Canvas BG</span>
+    <input type="color" id="c-bg" value="#f0ede8" oninput="document.getElementById('canvas-wrap').style.background=this.value"/>
+  </div>
+
+  <div class="sep"></div>
+
+  <div class="tb-group">
+    <button class="tb-btn" onclick="exportPNG()">PNG</button>
+    <button class="tb-btn" onclick="exportSVGFile()">SVG</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ CANVAS ══ -->
+<div id="canvas-wrap">
+  <svg id="connector-svg" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="drop-shadow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#00000015"/>
+      </filter>
+    </defs>
+    <!-- Road paths -->
+    <path id="road-fill" fill="none" stroke="#1e1e1e" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+    <path id="road-dash" fill="none" stroke="#f0a500" stroke-width="2.5" stroke-dasharray="16 12" stroke-linecap="round"/>
+    <!-- Connector lines -->
+    <g id="connector-lines"></g>
+    <!-- Road dots -->
+    <g id="road-dots"></g>
+  </svg>
+  <!-- Draggable cards live here -->
+  <div id="cards-layer"></div>
+  <button id="add-btn" onclick="addStation()">＋ Add Station</button>
+</div>
+
+<!-- ══ EDIT PANEL ══ -->
+<div id="edit-panel">
+  <h2>
+    <span id="ep-heading">Edit Station</span>
+    <button onclick="closePanel()" title="Close">✕</button>
+  </h2>
+
+  <div class="ep-section">
+    <h3>Content</h3>
+    <div class="ep-full">
+      <label>Title</label>
+      <input type="text" id="ep-title" placeholder="Station title" oninput="liveUpdate()"/>
+    </div>
+    <div class="ep-full">
+      <label>Subtitle / Description</label>
+      <textarea id="ep-sub" rows="3" placeholder="Supporting text..." oninput="liveUpdate()"></textarea>
+    </div>
+  </div>
+
+  <div class="ep-section">
+    <h3>Appearance</h3>
+    <div class="color-grid">
+      <div class="color-item"><input type="color" id="ep-fill" oninput="liveStyleUpdate()"/><span>Fill</span></div>
+      <div class="color-item"><input type="color" id="ep-border" oninput="liveStyleUpdate()"/><span>Border</span></div>
+      <div class="color-item"><input type="color" id="ep-title-color" oninput="liveStyleUpdate()"/><span>Title</span></div>
+      <div class="color-item"><input type="color" id="ep-sub-color" oninput="liveStyleUpdate()"/><span>Text</span></div>
+      <div class="color-item"><input type="color" id="ep-dot-color" oninput="liveStyleUpdate()"/><span>Dot</span></div>
+      <div class="color-item"><input type="color" id="ep-num-color" oninput="liveStyleUpdate()"/><span>Num text</span></div>
+    </div>
+    <div class="range-ep">
+      <label>Border width</label>
+      <input type="range" min="0" max="6" step="0.5" value="1.5" id="ep-border-w" oninput="liveStyleUpdate();this.nextElementSibling.textContent=this.value"/>
+      <span>1.5</span>
+    </div>
+    <div class="range-ep">
+      <label>Font size</label>
+      <input type="range" min="9" max="22" value="13" id="ep-font-size" oninput="liveStyleUpdate();this.nextElementSibling.textContent=this.value"/>
+      <span>13</span>
+    </div>
+  </div>
+
+  <div class="ep-section">
+    <h3>Connector</h3>
+    <div class="color-grid">
+      <div class="color-item"><input type="color" id="ep-line-color" value="#aaaaaa" oninput="liveStyleUpdate()"/><span>Line color</span></div>
+    </div>
+    <div class="range-ep">
+      <label>Line style</label>
+      <select id="ep-line-dash" onchange="liveStyleUpdate()" style="flex:1;font-size:11px;padding:4px 6px;">
+        <option value="none">Solid</option>
+        <option value="6 4" selected>Dashed</option>
+        <option value="2 4">Dotted</option>
+      </select>
+      <span></span>
+    </div>
+  </div>
+
+  <button class="ep-btn primary" onclick="closePanel()">Done</button>
+  <button class="ep-btn del" onclick="deleteStation()">Delete Station</button>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+var W=0,H=0;
+var roadCfg={color:'#1e1e1e',dashColor:'#f0a500',width:38,curviness:55,amplitude:80,frequency:3,dashLen:16,dashGap:12,dotSize:13};
+var cardRadius=10;
+var shadowOn=false;
+var globalFont="'Inter',sans-serif";
+
+var stations=[];
+var nextId=1;
+var activeId=null;
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+function init(){
+  resize();
+  window.addEventListener('resize',()=>{resize();renderRoad();renderConnectors();});
+  seedStations();
+  renderRoad();
+  renderAll();
+}
+
+function resize(){
+  var wrap=document.getElementById('canvas-wrap');
+  W=wrap.offsetWidth;H=wrap.offsetHeight;
+  var svg=document.getElementById('connector-svg');
+  svg.setAttribute('width',W);svg.setAttribute('height',H);
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+}
+
+/* ══════════════════════════════════════════════
+   SEED DATA
+══════════════════════════════════════════════ */
+var PALETTE=[
+  {fill:'#fef3e2',border:'#e8c97a',tc:'#7a4f00',sc:'#a07030',dc:'#c8903a',nc:'#fff',lc:'#d4a450'},
+  {fill:'#e8f0fc',border:'#7aa0d4',tc:'#1a3a6e',sc:'#2a5090',dc:'#4a70b0',nc:'#fff',lc:'#6a90c0'},
+  {fill:'#eeecfb',border:'#9990d8',tc:'#3a2880',sc:'#5548a8',dc:'#7060c0',nc:'#fff',lc:'#9080d0'},
+  {fill:'#fdeaf2',border:'#d878a8',tc:'#7a1848',sc:'#a03068',dc:'#c05090',nc:'#fff',lc:'#d070a8'},
+  {fill:'#fdeee8',border:'#d8886a',tc:'#7a2808',sc:'#a04028',dc:'#c05838',nc:'#fff',lc:'#d07050'},
+  {fill:'#e4f5ef',border:'#60b890',tc:'#0a5030',sc:'#1a7848',dc:'#30906a',nc:'#fff',lc:'#50a880'},
+  {fill:'#eaf4e0',border:'#80c060',tc:'#2a5810',sc:'#3a7820',dc:'#50981e',nc:'#fff',lc:'#70b840'},
+];
+
+var SEED=[
+  {title:'Financial Enhancements',sub:'V7.0.0 Streamline\nFinancial Operations'},
+  {title:'HCMS Enhancements',sub:'Provide Extra Flexible\nHR Management'},
+  {title:'Mobile App',sub:'Deliver More\nInformative Experience'},
+  {title:'Bid Management',sub:'Digitize Tenders\nLife Cycle'},
+  {title:'BI Capabilities',sub:'Empower Smarter\nDecisions'},
+  {title:'System Usability',sub:'Provide Adaptable\nUser Experience'},
+  {title:'GRP Engagements',sub:'Strengthening\nSystem Collaboration'},
+];
+
+function seedStations(){
+  // positions will be set after first resize
+  var cols=7;
+  SEED.forEach(function(s,i){
+    var p=PALETTE[i%PALETTE.length];
+    var roadY=getRoadYAt((i+1)/(cols+1));
+    stations.push({
+      id:nextId++,
+      title:s.title,
+      sub:s.sub,
+      x:((i+1)/(cols+1))*W - 85,
+      y: roadY + (i%2===0? -140 : 40),
+      fill:p.fill,border:p.border,titleColor:p.tc,subColor:p.sc,
+      dotColor:p.dc,numColor:p.nc,lineColor:p.lc,
+      borderWidth:1.5,fontSize:13,lineDash:'6 4'
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   ROAD MATH
+══════════════════════════════════════════════ */
+function getRoadPath(){
+  var pts=[];
+  var steps=200;
+  for(var i=0;i<=steps;i++){
+    var t=i/steps;
+    var x=t*W;
+    var freq=roadCfg.frequency;
+    var amp=roadCfg.amplitude;
+    // smooth sine-based road
+    var y=H/2 + Math.sin(t*Math.PI*freq)*amp;
+    pts.push([x,y]);
+  }
+  // build smooth cubic bezier path
+  if(pts.length<2) return '';
+  var d='M '+pts[0][0].toFixed(1)+' '+pts[0][1].toFixed(1);
+  // tension = curviness
+  var t2=(roadCfg.curviness/100)*0.5;
+  for(var i=1;i<pts.length;i++){
+    var prev=pts[i-1],cur=pts[i];
+    var next=pts[Math.min(i+1,pts.length-1)];
+    var prevprev=pts[Math.max(i-2,0)];
+    // catmull-rom style control points
+    var cp1x=(prev[0]+cur[0])/2;
+    var cp1y=prev[1]+(cur[1]-prevprev[1])*t2;
+    var cp2x=(prev[0]+cur[0])/2;
+    var cp2y=cur[1]-(next[1]-prev[1])*t2;
+    d+=' C '+cp1x.toFixed(1)+' '+cp1y.toFixed(1)+' '+cp2x.toFixed(1)+' '+cp2y.toFixed(1)+' '+cur[0].toFixed(1)+' '+cur[1].toFixed(1);
+  }
+  return d;
+}
+
+function getRoadYAt(frac){
+  // frac 0..1 along road
+  var freq=roadCfg.frequency;
+  var amp=roadCfg.amplitude;
+  return H/2 + Math.sin(frac*Math.PI*freq)*amp;
+}
+
+function getRoadPointAt(frac){
+  return {x:frac*W, y:getRoadYAt(frac)};
+}
+
+function renderRoad(){
+  if(!W||!H) return;
+  var d=getRoadPath();
+  var fill=document.getElementById('road-fill');
+  var dash=document.getElementById('road-dash');
+  fill.setAttribute('d',d);
+  fill.setAttribute('stroke',roadCfg.color);
+  fill.setAttribute('stroke-width',roadCfg.width);
+  dash.setAttribute('d',d);
+  dash.setAttribute('stroke',roadCfg.dashColor);
+  dash.setAttribute('stroke-width', Math.max(2, roadCfg.width*0.07));
+  dash.setAttribute('stroke-dasharray',roadCfg.dashLen+' '+roadCfg.dashGap);
+}
+
+/* ══════════════════════════════════════════════
+   CONNECTORS & DOTS
+══════════════════════════════════════════════ */
+function nearestRoadPoint(cardX,cardW){
+  // find fraction such that road x ≈ card center
+  var cx=cardX+(cardW||170)/2;
+  return Math.max(0,Math.min(1,cx/W));
+}
+
+function renderConnectors(){
+  var linesG=document.getElementById('connector-lines');
+  var dotsG=document.getElementById('road-dots');
+  linesG.innerHTML='';dotsG.innerHTML='';
+
+  var ns='http://www.w3.org/2000/svg';
+  stations.forEach(function(s){
+    var cardEl=document.getElementById('card-'+s.id);
+    if(!cardEl) return;
+    var cw=cardEl.offsetWidth||170;
+    var ch=cardEl.offsetHeight||80;
+    var cardCX=s.x+cw/2;
+    var cardCY=s.y+ch/2;
+
+    // closest point on road
+    var frac=Math.max(0,Math.min(1,cardCX/W));
+    var rp=getRoadPointAt(frac);
+
+    // connector line
+    var line=document.createElementNS(ns,'line');
+    line.setAttribute('x1',cardCX);line.setAttribute('y1',cardCY);
+    line.setAttribute('x2',rp.x);line.setAttribute('y2',rp.y);
+    line.setAttribute('stroke',s.lineColor||'#aaa');
+    line.setAttribute('stroke-width','1.2');
+    line.setAttribute('stroke-dasharray',s.lineDash==='none'?'':s.lineDash||'6 4');
+    linesG.appendChild(line);
+
+    // dot on road
+    var dotR=roadCfg.dotSize;
+    var circle=document.createElementNS(ns,'circle');
+    circle.setAttribute('cx',rp.x);circle.setAttribute('cy',rp.y);circle.setAttribute('r',dotR);
+    circle.setAttribute('fill',s.dotColor||'#888');
+    dotsG.appendChild(circle);
+
+    // number label on dot
+    var txt=document.createElementNS(ns,'text');
+    txt.setAttribute('x',rp.x);txt.setAttribute('y',rp.y);
+    txt.setAttribute('text-anchor','middle');txt.setAttribute('dominant-baseline','central');
+    txt.setAttribute('font-size',Math.max(9,dotR*0.85));
+    txt.setAttribute('font-weight','700');
+    txt.setAttribute('fill',s.numColor||'#fff');
+    txt.setAttribute('font-family',globalFont);
+    txt.setAttribute('pointer-events','none');
+    txt.textContent=stations.indexOf(s)+1;
+    dotsG.appendChild(txt);
+  });
+}
+
+/* ══════════════════════════════════════════════
+   CARDS
+══════════════════════════════════════════════ */
+function renderAll(){
+  var layer=document.getElementById('cards-layer');
+  layer.innerHTML='';
+  stations.forEach(function(s){renderCard(s);});
+  renderConnectors();
+}
+
+function renderCard(s){
+  var layer=document.getElementById('cards-layer');
+  var old=document.getElementById('card-'+s.id);
+  if(old) old.remove();
+
+  var div=document.createElement('div');
+  div.className='station-card';
+  div.id='card-'+s.id;
+  div.style.left=s.x+'px';
+  div.style.top=s.y+'px';
+  div.style.background=s.fill;
+  div.style.borderColor=s.border;
+  div.style.borderWidth=(s.borderWidth||1.5)+'px';
+  div.style.borderRadius=cardRadius+'px';
+  div.style.fontFamily=globalFont;
+  div.style.boxShadow=shadowOn?'0 6px 24px rgba(0,0,0,.15)':'0 2px 10px rgba(0,0,0,.08)';
+
+  var numBadge=document.createElement('div');
+  numBadge.className='card-num';
+  numBadge.style.background=s.dotColor||'#888';
+  numBadge.style.color=s.numColor||'#fff';
+  var idx=stations.findIndex(function(x){return x.id===s.id;})+1;
+  numBadge.textContent=idx;
+  div.appendChild(numBadge);
+
+  var titleEl=document.createElement('div');
+  titleEl.className='card-title';
+  titleEl.style.color=s.titleColor||'#1a1a1a';
+  titleEl.style.fontSize=(s.fontSize||13)+'px';
+  titleEl.textContent=s.title;
+  div.appendChild(titleEl);
+
+  if(s.sub){
+    var subEl=document.createElement('div');
+    subEl.className='card-sub';
+    subEl.style.color=s.subColor||'#555';
+    subEl.style.fontSize=Math.max(9,(s.fontSize||13)-2)+'px';
+    subEl.style.whiteSpace='pre-line';
+    subEl.textContent=s.sub;
+    div.appendChild(subEl);
+  }
+
+  var editBtn=document.createElement('button');
+  editBtn.className='card-edit-btn';
+  editBtn.title='Edit';
+  editBtn.textContent='✎';
+  editBtn.addEventListener('click',function(e){e.stopPropagation();openPanel(s.id);});
+  div.appendChild(editBtn);
+
+  makeDraggable(div,s);
+  layer.appendChild(div);
+}
+
+/* ══════════════════════════════════════════════
+   DRAG
+══════════════════════════════════════════════ */
+function makeDraggable(el,s){
+  var ox=0,oy=0,dragging=false;
+
+  el.addEventListener('mousedown',onDown);
+  el.addEventListener('touchstart',onTouchStart,{passive:false});
+
+  function onDown(e){
+    if(e.target.classList.contains('card-edit-btn')) return;
+    e.preventDefault();
+    dragging=true;
+    ox=e.clientX-s.x; oy=e.clientY-s.y;
+    el.classList.add('dragging');
+    document.addEventListener('mousemove',onMove);
+    document.addEventListener('mouseup',onUp);
+  }
+  function onMove(e){
+    if(!dragging) return;
+    s.x=e.clientX-ox; s.y=e.clientY-oy;
+    el.style.left=s.x+'px'; el.style.top=s.y+'px';
+    renderConnectors();
+  }
+  function onUp(){
+    dragging=false;
+    el.classList.remove('dragging');
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onUp);
+  }
+
+  function onTouchStart(e){
+    if(e.target.classList.contains('card-edit-btn')) return;
+    e.preventDefault();
+    var t=e.touches[0];
+    ox=t.clientX-s.x; oy=t.clientY-s.y;
+    el.classList.add('dragging');
+    document.addEventListener('touchmove',onTouchMove,{passive:false});
+    document.addEventListener('touchend',onTouchEnd);
+  }
+  function onTouchMove(e){
+    e.preventDefault();
+    var t=e.touches[0];
+    s.x=t.clientX-ox; s.y=t.clientY-oy;
+    el.style.left=s.x+'px'; el.style.top=s.y+'px';
+    renderConnectors();
+  }
+  function onTouchEnd(){
+    el.classList.remove('dragging');
+    document.removeEventListener('touchmove',onTouchMove);
+    document.removeEventListener('touchend',onTouchEnd);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   EDIT PANEL
+══════════════════════════════════════════════ */
+function openPanel(id){
+  activeId=id;
+  var s=stations.find(function(x){return x.id===id;});
+  if(!s) return;
+  document.getElementById('ep-heading').textContent='Edit Station '+(stations.indexOf(s)+1);
+  document.getElementById('ep-title').value=s.title||'';
+  document.getElementById('ep-sub').value=s.sub||'';
+  document.getElementById('ep-fill').value=hexify(s.fill);
+  document.getElementById('ep-border').value=hexify(s.border);
+  document.getElementById('ep-title-color').value=hexify(s.titleColor);
+  document.getElementById('ep-sub-color').value=hexify(s.subColor);
+  document.getElementById('ep-dot-color').value=hexify(s.dotColor);
+  document.getElementById('ep-num-color').value=hexify(s.numColor||'#ffffff');
+  document.getElementById('ep-line-color').value=hexify(s.lineColor||'#aaaaaa');
+  document.getElementById('ep-border-w').value=s.borderWidth||1.5;
+  document.getElementById('ep-border-w').nextElementSibling.textContent=s.borderWidth||1.5;
+  document.getElementById('ep-font-size').value=s.fontSize||13;
+  document.getElementById('ep-font-size').nextElementSibling.textContent=s.fontSize||13;
+  document.getElementById('ep-line-dash').value=s.lineDash||'6 4';
+  document.getElementById('edit-panel').classList.add('open');
+}
+
+function closePanel(){
+  document.getElementById('edit-panel').classList.remove('open');
+  activeId=null;
+}
+
+function liveUpdate(){
+  if(!activeId) return;
+  var s=stations.find(function(x){return x.id===activeId;});
+  if(!s) return;
+  s.title=document.getElementById('ep-title').value;
+  s.sub=document.getElementById('ep-sub').value;
+  updateCard(s);
+}
+
+function liveStyleUpdate(){
+  if(!activeId) return;
+  var s=stations.find(function(x){return x.id===activeId;});
+  if(!s) return;
+  s.fill=document.getElementById('ep-fill').value;
+  s.border=document.getElementById('ep-border').value;
+  s.titleColor=document.getElementById('ep-title-color').value;
+  s.subColor=document.getElementById('ep-sub-color').value;
+  s.dotColor=document.getElementById('ep-dot-color').value;
+  s.numColor=document.getElementById('ep-num-color').value;
+  s.lineColor=document.getElementById('ep-line-color').value;
+  s.borderWidth=parseFloat(document.getElementById('ep-border-w').value);
+  s.fontSize=parseInt(document.getElementById('ep-font-size').value);
+  s.lineDash=document.getElementById('ep-line-dash').value;
+  updateCard(s);
+  renderConnectors();
+}
+
+function updateCard(s){
+  // fully re-render to reflect text & style changes
+  renderCard(s);
+  renderConnectors();
+}
+
+function deleteStation(){
+  if(!activeId) return;
+  stations=stations.filter(function(x){return x.id!==activeId;});
+  var el=document.getElementById('card-'+activeId);
+  if(el) el.remove();
+  closePanel();
+  renderAll();
+}
+
+/* ══════════════════════════════════════════════
+   ADD STATION
+══════════════════════════════════════════════ */
+function addStation(){
+  var p=PALETTE[stations.length%PALETTE.length];
+  var s={
+    id:nextId++,
+    title:'New Station',
+    sub:'Add description here',
+    x:W/2-85,
+    y:H/2-120,
+    fill:p.fill,border:p.border,titleColor:p.tc,subColor:p.sc,
+    dotColor:p.dc,numColor:p.nc,lineColor:p.lc,
+    borderWidth:1.5,fontSize:13,lineDash:'6 4'
+  };
+  stations.push(s);
+  renderCard(s);
+  renderConnectors();
+  openPanel(s.id);
+}
+
+/* ══════════════════════════════════════════════
+   GLOBAL CONTROLS
+══════════════════════════════════════════════ */
+function setRoadColor(v){roadCfg.color=v;renderRoad();}
+function setDashColor(v){roadCfg.dashColor=v;renderRoad();}
+function setRoadWidth(v){roadCfg.width=v;renderRoad();}
+function setCurviness(v){roadCfg.curviness=v;renderRoad();}
+function setAmplitude(v){roadCfg.amplitude=v;renderRoad();renderConnectors();}
+function setFrequency(v){roadCfg.frequency=v;renderRoad();renderConnectors();}
+function setDashLen(v){roadCfg.dashLen=v;renderRoad();}
+function setDashGap(v){roadCfg.dashGap=v;renderRoad();}
+function setDotSize(v){roadCfg.dotSize=v;renderConnectors();}
+function setCardRadius(v){
+  cardRadius=v;
+  document.querySelectorAll('.station-card').forEach(function(el){el.style.borderRadius=v+'px';});
+}
+function toggleShadow(btn){
+  shadowOn=!shadowOn;
+  btn.textContent=shadowOn?'On':'Off';
+  btn.classList.toggle('active',shadowOn);
+  document.querySelectorAll('.station-card').forEach(function(el){
+    el.style.boxShadow=shadowOn?'0 6px 24px rgba(0,0,0,.15)':'0 2px 10px rgba(0,0,0,.08)';
+  });
+}
+function setGlobalFont(v){
+  globalFont=v;
+  document.querySelectorAll('.station-card').forEach(function(el){el.style.fontFamily=v;});
+  renderConnectors();
+}
+
+/* ══════════════════════════════════════════════
+   EXPORT
+══════════════════════════════════════════════ */
+function exportPNG(){
+  // Build a composite SVG with foreignObject for cards
+  var svg=document.getElementById('connector-svg');
+  var cloned=svg.cloneNode(true);
+  // embed cards as foreignObject
+  var fo=document.createElementNS('http://www.w3.org/2000/svg','foreignObject');
+  fo.setAttribute('x',0);fo.setAttribute('y',0);
+  fo.setAttribute('width',W);fo.setAttribute('height',H);
+  var div=document.createElement('div');
+  div.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+  div.style.position='relative';div.style.width=W+'px';div.style.height=H+'px';
+  div.innerHTML=document.getElementById('cards-layer').innerHTML;
+  fo.appendChild(div);
+  cloned.appendChild(fo);
+  var xml=new XMLSerializer().serializeToString(cloned);
+  var blob=new Blob([xml],{type:'image/svg+xml'});
+  var url=URL.createObjectURL(blob);
+  var img=new Image();
+  img.onload=function(){
+    var c=document.createElement('canvas');
+    c.width=W*2;c.height=H*2;
+    var ctx=c.getContext('2d');
+    ctx.scale(2,2);
+    ctx.fillStyle=document.getElementById('canvas-wrap').style.background||'#f0ede8';
+    ctx.fillRect(0,0,W,H);
+    ctx.drawImage(img,0,0);
+    var a=document.createElement('a');
+    a.download='roadmap.png';a.href=c.toDataURL('image/png');a.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src=url;
+}
+
+function exportSVGFile(){
+  var svg=document.getElementById('connector-svg').outerHTML;
+  var blob=new Blob([svg],{type:'image/svg+xml'});
+  var a=document.createElement('a');
+  a.download='roadmap.svg';a.href=URL.createObjectURL(blob);a.click();
+}
+
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+function hexify(str){
+  if(!str) return '#888888';
+  if(str[0]==='#') return str.length===7?str:str+'000000'.slice(str.length-1);
+  var m=str.match(/\d+/g);
+  if(!m) return '#888888';
+  return '#'+m.slice(0,3).map(function(x){return ('0'+parseInt(x).toString(16)).slice(-2);}).join('');
+}
+
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
